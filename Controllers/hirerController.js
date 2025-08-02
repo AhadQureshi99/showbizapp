@@ -665,19 +665,6 @@ const deleteHirerSubmission = handler(async (req, res) => {
 
 // Get All Hirer Submissions
 const getAllHirerSubmissions = handler(async (req, res) => {
-  const user_id = req.user._id;
-
-  const hirer = await Hirer.findById(user_id);
-  if (!hirer) {
-    res.status(404);
-    throw new Error("Hirer not found");
-  }
-
-  if (hirer.status !== "approved") {
-    res.status(403);
-    throw new Error("Account is not approved by admin");
-  }
-
   const submissions = await HirerSubmission.find({
     $or: [{ hirer: { $exists: true } }, { talent: { $exists: true } }],
   })
@@ -695,35 +682,21 @@ const getAllHirerSubmissions = handler(async (req, res) => {
     throw new Error("No submissions found");
   }
 
-  const currentUser = await Hirer.findById(user_id)
-    .select("name profilePic_url role")
-    .lean();
-
-  const formattedSubmissions = submissions.map((submission) => {
-    let hirerData = submission.hirer || submission.talent;
-
-    if (
-      !hirerData &&
-      (!submission.hirer ||
-        !submission.talent ||
-        String(submission.hirer) === String(user_id) ||
-        String(submission.talent) === String(user_id))
-    ) {
-      hirerData = currentUser;
-    }
-
-    return {
-      _id: submission._id,
-      subject: submission.subject,
-      description: submission.description,
-      createdAt: submission.createdAt || new Date(),
-      hirer: {
-        name: hirerData?.name || "Unknown Hirer",
-        profilePic: hirerData?.profilePic_url || hirerData?.profilePic || null,
-        role: hirerData?.role || "Unknown Role",
-      },
-    };
-  });
+  const formattedSubmissions = submissions.map((submission) => ({
+    _id: submission._id,
+    subject: submission.subject,
+    description: submission.description,
+    createdAt: submission.createdAt || new Date(),
+    hirer: {
+      name:
+        submission.hirer?.name || submission.talent?.name || "Unknown Hirer",
+      profilePic:
+        submission.hirer?.profilePic_url ||
+        submission.talent?.profilePic ||
+        null,
+      role: submission.hirer?.role || "Unknown Role",
+    },
+  }));
 
   res.json({
     message: "Submissions retrieved successfully",

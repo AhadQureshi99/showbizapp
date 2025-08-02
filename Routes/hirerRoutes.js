@@ -48,7 +48,7 @@ hirerRouter.delete(
   authHandler,
   deleteHirerSubmission
 );
-hirerRouter.get("/submissions", authHandler, getAllHirerSubmissions);
+hirerRouter.get("/submissions",  getAllHirerSubmissions);
 hirerRouter.get(
   "/hirer/:hirerId/submissions",
   authHandler,
