@@ -435,10 +435,28 @@ const getTalentProfile = handler(async (req, res) => {
 
 // Get All Talents
 const getAllTalents = handler(async (req, res) => {
+  // Check if user is authenticated and is a hirer
+  if (!req.user || req.user.userType !== "Hirer") {
+    res.status(403);
+    throw new Error("Only authenticated hirers can access this endpoint");
+  }
+
+  // Verify hirer exists and is approved
+  const hirer = await require("../Models/hirerModel").findById(req.user._id);
+  if (!hirer) {
+    res.status(404);
+    throw new Error("Hirer not found");
+  }
+  if (hirer.status !== "approved") {
+    res.status(403);
+    throw new Error("Hirer account is not approved");
+  }
+
+  // Fetch all verified talents
   const talents = await talentModel
     .find({ isVerified: true })
     .select(
-      "name email phone role gender age skills createdAt images.profilePic.url"
+      "_id name email phone role gender age skills createdAt images.profilePic.url"
     )
     .lean();
 
@@ -447,8 +465,31 @@ const getAllTalents = handler(async (req, res) => {
     throw new Error("No talents found");
   }
 
+  // Fetch accepted hiring requests for the hirer
+  const acceptedRequests = await hiringRequestModel
+    .find({
+      hirer: req.user._id,
+      status: "Accepted",
+    })
+    .select("talent")
+    .lean();
+
+  // Create a set of talent IDs with accepted requests
+  const connectedTalentIds = new Set(
+    acceptedRequests.map((request) => request.talent.toString())
+  );
+
+  // Format talents, including email and phone only for connected talents
   const formattedTalents = talents.map((talent) => ({
-    ...talent,
+    _id: talent._id,
+    name: talent.name,
+    email: connectedTalentIds.has(talent._id.toString()) ? talent.email : null,
+    phone: connectedTalentIds.has(talent._id.toString()) ? talent.phone : null,
+    role: talent.role,
+    gender: talent.gender,
+    age: talent.age,
+    skills: talent.skills,
+    createdAt: talent.createdAt,
     profilePic: talent.images?.profilePic?.url || null,
   }));
 
