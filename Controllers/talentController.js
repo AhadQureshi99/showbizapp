@@ -433,7 +433,6 @@ const getTalentProfile = handler(async (req, res) => {
   });
 });
 
-// Get All Talents
 const getAllTalents = handler(async (req, res) => {
   // Check if user is authenticated and is a hirer
   if (!req.user || req.user.userType !== "Hirer") {
@@ -452,11 +451,11 @@ const getAllTalents = handler(async (req, res) => {
     throw new Error("Hirer account is not approved");
   }
 
-  // Fetch all verified talents
+  // Fetch all verified talents with all required fields
   const talents = await talentModel
     .find({ isVerified: true })
     .select(
-      "_id name email phone role gender age skills createdAt images.profilePic.url"
+      "_id name email phone role gender age deviceToken height weight bodyType skinTone language skills images.profilePic.url images.front.url images.left.url images.right.url video.url makeoverNeeded willingToWorkAsExtra aboutYourself createdAt updatedAt"
     )
     .lean();
 
@@ -479,18 +478,32 @@ const getAllTalents = handler(async (req, res) => {
     acceptedRequests.map((request) => request.talent.toString())
   );
 
-  // Format talents, including email and phone only for connected talents
+  // Format talents to match the Dart model
   const formattedTalents = talents.map((talent) => ({
-    _id: talent._id,
-    name: talent.name,
+    id: talent._id.toString(),
+    name: talent.name || null,
     email: connectedTalentIds.has(talent._id.toString()) ? talent.email : null,
     phone: connectedTalentIds.has(talent._id.toString()) ? talent.phone : null,
     role: talent.role,
     gender: talent.gender,
-    age: talent.age,
-    skills: talent.skills,
-    createdAt: talent.createdAt,
+    age: talent.age || null,
+    deviceToken: talent.deviceToken || null,
+    height: talent.height || null,
+    weight: talent.weight || null,
+    bodyType: talent.bodyType || null,
+    skinTone: talent.skinTone || null,
+    language: talent.language || null,
+    skills: talent.skills || null,
     profilePic: talent.images?.profilePic?.url || null,
+    front: talent.images?.front?.url || null,
+    left: talent.images?.left?.url || null,
+    right: talent.images?.right?.url || null,
+    video: talent.video?.url || null,
+    makeoverNeeded: talent.makeoverNeeded || false,
+    willingToWorkAsExtra: talent.willingToWorkAsExtra || false,
+    aboutYourself: talent.aboutYourself || null,
+    createdAt: talent.createdAt,
+    updatedAt: talent.updatedAt,
   }));
 
   res.json({
