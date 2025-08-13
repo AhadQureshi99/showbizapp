@@ -12,6 +12,8 @@ const {
   getAllTalents,
 } = require("../Controllers/talentController");
 const authHandler = require("../Middleware/authMiddleware");
+const talentModel = require("../Models/talentModel");
+const handler = require("express-async-handler");
 
 const upload = multer({ storage: multer.memoryStorage() });
 const talentRouter = express.Router();
@@ -34,7 +36,52 @@ talentRouter.put(
   updateTalentProfile
 );
 talentRouter.get("/get-profile", authHandler, getTalentProfile);
-talentRouter.get("/all-talents", authHandler, getAllTalents); // Updated to require authentication
-talentRouter.get("/all-talentss", getAllTalents); // Updated to require authentication
+talentRouter.get("/all-talents", authHandler, getAllTalents);
+
+// New public endpoint to get all talents without authentication
+talentRouter.get(
+  "/public-talents",
+  handler(async (req, res) => {
+    // Fetch all verified talents with limited fields
+    const talents = await talentModel
+      .find({ isVerified: true })
+      .select(
+        "_id name role gender age height weight bodyType skinTone language skills images.profilePic.url video.url makeoverNeeded willingToWorkAsExtra aboutYourself createdAt updatedAt"
+      )
+      .lean();
+
+    if (!talents || talents.length === 0) {
+      res.status(404);
+      throw new Error("No talents found");
+    }
+
+    // Format talents to match the response structure
+    const formattedTalents = talents.map((talent) => ({
+      id: talent._id.toString(),
+      name: talent.name || null,
+      role: talent.role,
+      gender: talent.gender,
+      age: talent.age || null,
+      height: talent.height || null,
+      weight: talent.weight || null,
+      bodyType: talent.bodyType || null,
+      skinTone: talent.skinTone || null,
+      language: talent.language || null,
+      skills: talent.skills || null,
+      profilePic: talent.images?.profilePic?.url || null,
+      video: talent.video?.url || null,
+      makeoverNeeded: talent.makeoverNeeded || false,
+      willingToWorkAsExtra: talent.willingToWorkAsExtra || false,
+      aboutYourself: talent.aboutYourself || null,
+      createdAt: talent.createdAt,
+      updatedAt: talent.updatedAt,
+    }));
+
+    res.json({
+      message: "Talents retrieved successfully",
+      talents: formattedTalents,
+    });
+  })
+);
 
 module.exports = talentRouter;
