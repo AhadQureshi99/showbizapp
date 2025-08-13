@@ -35,5 +35,6 @@ talentRouter.put(
 );
 talentRouter.get("/get-profile", authHandler, getTalentProfile);
 talentRouter.get("/all-talents", authHandler, getAllTalents); // Updated to require authentication
+talentRouter.get("/all-talentss", getAllTalents); // Updated to require authentication
 
 module.exports = talentRouter;
